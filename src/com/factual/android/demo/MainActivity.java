@@ -1,12 +1,17 @@
 package com.factual.android.demo;
 
 import java.util.List;
+import java.util.Map;
 
 import android.app.Activity;
+import android.content.Context;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.widget.TextView;
 
+import com.factual.driver.Circle;
 import com.factual.driver.Factual;
 import com.factual.driver.Query;
 import com.factual.driver.ReadResponse;
@@ -22,7 +27,25 @@ public class MainActivity extends Activity {
         setContentView(R.layout.main);
         resultText = (TextView) findViewById(R.id.resultText);
         FactualRetrievalTask task = new FactualRetrievalTask();
-		task.execute(new Query().limit(5));
+        
+        double latitude = 34.06018; 
+        double longitude = -118.41835;
+        int meters = 500;
+		LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+		String locationProvider = LocationManager.GPS_PROVIDER;
+		Location location = locationManager.getLastKnownLocation(locationProvider);
+		if (location != null) {
+			latitude = location.getLatitude();
+			longitude = location.getLongitude();
+		}
+		
+		Query query = new Query()
+		.within(new Circle(latitude, longitude, meters))
+		.field("cuisine").equal("Italian")
+		.sortAsc("$distance")
+		.only("name", "address", "tel");
+		
+		task.execute(query);
     }
     
 	protected class FactualRetrievalTask extends AsyncTask<Query, Integer, List<ReadResponse>> {
@@ -30,7 +53,7 @@ public class MainActivity extends Activity {
 		protected List<ReadResponse> doInBackground(Query... params) {
 			List<ReadResponse> results = Lists.newArrayList();
 			for (Query q : params) {
-				results.add(factual.fetch("places", q));
+				results.add(factual.fetch("restaurants-us", q));
 			}
 			return results;
 		}
@@ -42,9 +65,15 @@ public class MainActivity extends Activity {
 		@Override
 		protected void onPostExecute(List<ReadResponse> responses) {
 			StringBuffer sb = new StringBuffer();
-			for (ReadResponse r : responses) {
-				sb.append(r.getJson());
+			for (ReadResponse response : responses) {
+				for (Map<String, Object> restaurant : response.getData()) {
+				String name = (String) restaurant.get("name");
+				String address = (String) restaurant.get("address");
+				String phone = (String) restaurant.get("tel");
+				Number distance = (Number) restaurant.get("$distance");
+				sb.append(distance + " meters away: "+name+" @ " +address + ", call "+phone);
 				sb.append(System.getProperty("line.separator"));
+				}  
 			}
 			resultText.setText(sb.toString());
 		}
