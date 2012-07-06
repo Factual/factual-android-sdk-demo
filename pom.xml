@@ -15,7 +15,7 @@
     <dependency>
       <groupId>com.factual</groupId>
       <artifactId>factual-java-driver</artifactId>
-      <version>1.4.1-android</version>
+      <version>1.4.3-android</version>
     </dependency>
   </dependencies>
 
